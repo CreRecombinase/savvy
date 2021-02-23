@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.2)
 project(savvy VERSION 2.0.1)
+include(FetchContent)
 include(CMakePackageConfigHelpers)
 include(GNUInstallDirs)
 
@@ -8,6 +9,26 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 set(CMAKE_CXX_STANDARD 11)
+
+if (BUILD_SHARED_LIBS)
+    set(LIBLZMA_LIB_NAME ${CMAKE_SHARED_LIBRARY_PREFIX}lzma${CMAKE_SHARED_LIBRARY_SUFFIX})
+    set(ZLIB_LIB_NAME ${CMAKE_SHARED_LIBRARY_PREFIX}z${CMAKE_SHARED_LIBRARY_SUFFIX})
+    #set(ZSTD_LIB_NAME ${CMAKE_SHARED_LIBRARY_PREFIX}zstd${CMAKE_SHARED_LIBRARY_SUFFIX})
+else()
+    set(LIBLZMA_LIB_NAME ${CMAKE_STATIC_LIBRARY_PREFIX}lzma${CMAKE_STATIC_LIBRARY_SUFFIX})
+    set(ZLIB_LIB_NAME ${CMAKE_STATIC_LIBRARY_PREFIX}z${CMAKE_STATIC_LIBRARY_SUFFIX})
+    #set(ZSTD_LIB_NAME ${CMAKE_STATIC_LIBRARY_PREFIX}zstd${CMAKE_STATIC_LIBRARY_SUFFIX})
+endif()
+
+find_library(LIBLZMA_LIBRARIES
+             NAMES ${LIBLZMA_LIB_NAME})
+
+find_library(ZLIB_LIBRARIES
+             NAMES ${ZLIB_LIB_NAME})
+
+# find_library(ZSTD_LIBRARIES
+#              NAMES ${ZSTD_LIB_NAME})
+
 
 #add_library(hts STATIC IMPORTED)
 #set_property(TARGET hts PROPERTY IMPORTED_LOCATION ${CMAKE_INSTALL_PREFIX}/lib/libhts.a)
@@ -27,11 +48,41 @@ endif()
     set(CMAKE_FIND_LIBRARY_SUFFIXES ".a;${CMAKE_FIND_LIBRARY_SUFFIXES}") # Prefer libz.a when both are available
 #endif()
 
-find_library(ZLIB_LIBRARY z)
-find_library(ZSTD_LIBRARY zstd)
+# find_library(ZLIB_LIBRARY z)
+
+#find_library(ZSTD_LIBRARY zstd)
 find_package(Threads)
 
 #get_target_property(SHRINKWRAP_LIBS shrinkwrap INTERFACE_LINK_LIBRARIES)
+set(SHRINKWRAP_BUILD_TESTS OFF)
+set(ZSTD_LEGACY_SUPPORT OFF)
+set(ZSTD_BUILD_PROGRAMS OFF)
+
+FetchContent_Declare(
+  zstd
+  GIT_REPOSITORY https://github.com/facebook/zstd.git
+  GIT_TAG v1.4.8
+  SOURCE_SUBDIR "build/cmake"
+  )
+FetchContent_MakeAvailable(zstd)
+
+FetchContent_Declare(
+  shrinkwrap
+  GIT_REPOSITORY https://github.com/CreRecombinase/shrinkwrap.git
+  GIT_TAG cmake_edits
+  )
+FetchContent_MakeAvailable(shrinkwrap)
+
+
+
+
+# if(NOT shrinkwrap_POPULATED)
+#   FetchContent_Populate(shrinkwrap)
+#   add_subdirectory(${shrinkwrap_SOURCE_DIR})
+# endif()
+message(STATUS "Shrinkwrap_Source: ${shrinkwrap_SOURCE_DIR}")
+message(STATUS "ZSTD_Source: ${zstd_SOURCE_DIR}")
+
 
 add_definitions(-DSAVVY_VERSION="${PROJECT_VERSION}")
 
@@ -55,7 +106,7 @@ add_library(savvy INTERFACE)
 #        include/savvy/varint.hpp #src/savvy/varint.cpp include/savvy/varint.hpp
 #        include/savvy/vcf_reader.hpp) #src/savvy/vcf_reader.cpp include/savvy/vcf_reader.hpp)
 
-target_link_libraries(savvy INTERFACE ${ZLIB_LIBRARY} ${ZSTD_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(savvy INTERFACE shrinkwrap)
 target_include_directories(savvy INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> $<INSTALL_INTERFACE:include>)
 
 add_executable(sav
@@ -71,16 +122,8 @@ add_executable(sav
         src/sav/sort.cpp include/sav/sort.hpp
         src/sav/stat.cpp include/sav/stat.hpp
         src/sav/utility.cpp include/sav/utility.hpp)
-target_link_libraries(sav savvy)
+target_link_libraries(sav savvy libzstd_static)
 
-#add_executable(bcf2m3vcf src/sav/bcf2m3vcf.cpp)
-#target_link_libraries(bcf2m3vcf savvy)
-
-#add_executable(sav-sample-sort src/sav/sav_sample_sort.cpp)
-#target_link_libraries(sav-sample-sort savvy)
-
-#add_executable(savvy-speed-test src/test/savvy_speed_test.cpp)
-#target_link_libraries(savvy-speed-test savvy)
 
 add_custom_target(manuals
                   COMMAND help2man --output "${CMAKE_BINARY_DIR}/sav.1" "${CMAKE_BINARY_DIR}/sav"
@@ -140,16 +183,16 @@ install(TARGETS sav COMPONENT cli
         RUNTIME DESTINATION bin
         OPTIONAL)
 
-install(EXPORT ${PROJECT_NAME}-config COMPONENT api DESTINATION share/${PROJECT_NAME})
-write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config-version.cmake COMPATIBILITY SameMajorVersion)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config-version.cmake COMPONENT api DESTINATION share/${PROJECT_NAME})
+# install(EXPORT ${PROJECT_NAME}-config COMPONENT api DESTINATION share/${PROJECT_NAME})
+# write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config-version.cmake COMPATIBILITY SameMajorVersion)
+# install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config-version.cmake COMPONENT api DESTINATION share/${PROJECT_NAME})
 
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/sav.1 ${CMAKE_CURRENT_BINARY_DIR}/sav_export.1 ${CMAKE_CURRENT_BINARY_DIR}/sav_head.1 ${CMAKE_CURRENT_BINARY_DIR}/sav_import.1 ${CMAKE_CURRENT_BINARY_DIR}/sav_index.1 ${CMAKE_CURRENT_BINARY_DIR}/sav_merge.1 ${CMAKE_CURRENT_BINARY_DIR}/sav_rehead.1 ${CMAKE_CURRENT_BINARY_DIR}/sav_stat-index.1
-        COMPONENT cli
-        DESTINATION share/man/man1
-        OPTIONAL)
+# install(FILES ${CMAKE_CURRENT_BINARY_DIR}/sav.1 ${CMAKE_CURRENT_BINARY_DIR}/sav_export.1 ${CMAKE_CURRENT_BINARY_DIR}/sav_head.1 ${CMAKE_CURRENT_BINARY_DIR}/sav_import.1 ${CMAKE_CURRENT_BINARY_DIR}/sav_index.1 ${CMAKE_CURRENT_BINARY_DIR}/sav_merge.1 ${CMAKE_CURRENT_BINARY_DIR}/sav_rehead.1 ${CMAKE_CURRENT_BINARY_DIR}/sav_stat-index.1
+#         COMPONENT cli
+#         DESTINATION share/man/man1
+#         OPTIONAL)
 
-export(EXPORT ${PROJECT_NAME}-config)
+# export(EXPORT ${PROJECT_NAME}-config)
 
 #set(CPACK_PACKAGE_NAME "${PROJECT_NAME")
 #set(CPACK_ARCHIVE_COMPONENT_INSTALL ON)
@@ -165,7 +208,7 @@ export(EXPORT ${PROJECT_NAME}-config)
 #    set(CPACK_GENERATOR "DEB;RPM;STGZ")
 #endif()
 
-set(CPACK_PACKAGE_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
-set(CPACK_PACKAGE_VERSION_MINOR ${PROJECT_VERSION_MINOR})
-set(CPACK_PACKAGE_VERSION_PATCH ${PROJECT_VERSION_PATCH})
-include(CPack)
+# set(CPACK_PACKAGE_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
+# set(CPACK_PACKAGE_VERSION_MINOR ${PROJECT_VERSION_MINOR})
+# set(CPACK_PACKAGE_VERSION_PATCH ${PROJECT_VERSION_PATCH})
+# include(CPack)
