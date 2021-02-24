@@ -10,21 +10,21 @@ endif()
 
 set(CMAKE_CXX_STANDARD 11)
 
-if (BUILD_SHARED_LIBS)
-    set(LIBLZMA_LIB_NAME ${CMAKE_SHARED_LIBRARY_PREFIX}lzma${CMAKE_SHARED_LIBRARY_SUFFIX})
-    set(ZLIB_LIB_NAME ${CMAKE_SHARED_LIBRARY_PREFIX}z${CMAKE_SHARED_LIBRARY_SUFFIX})
-    #set(ZSTD_LIB_NAME ${CMAKE_SHARED_LIBRARY_PREFIX}zstd${CMAKE_SHARED_LIBRARY_SUFFIX})
-else()
-    set(LIBLZMA_LIB_NAME ${CMAKE_STATIC_LIBRARY_PREFIX}lzma${CMAKE_STATIC_LIBRARY_SUFFIX})
-    set(ZLIB_LIB_NAME ${CMAKE_STATIC_LIBRARY_PREFIX}z${CMAKE_STATIC_LIBRARY_SUFFIX})
-    #set(ZSTD_LIB_NAME ${CMAKE_STATIC_LIBRARY_PREFIX}zstd${CMAKE_STATIC_LIBRARY_SUFFIX})
-endif()
+# if (BUILD_SHARED_LIBS)
+#     set(LIBLZMA_LIB_NAME ${CMAKE_SHARED_LIBRARY_PREFIX}lzma${CMAKE_SHARED_LIBRARY_SUFFIX})
+#     set(ZLIB_LIB_NAME ${CMAKE_SHARED_LIBRARY_PREFIX}z${CMAKE_SHARED_LIBRARY_SUFFIX})
+#     #set(ZSTD_LIB_NAME ${CMAKE_SHARED_LIBRARY_PREFIX}zstd${CMAKE_SHARED_LIBRARY_SUFFIX})
+# else()
+#     set(LIBLZMA_LIB_NAME ${CMAKE_STATIC_LIBRARY_PREFIX}lzma${CMAKE_STATIC_LIBRARY_SUFFIX})
+#     set(ZLIB_LIB_NAME ${CMAKE_STATIC_LIBRARY_PREFIX}z${CMAKE_STATIC_LIBRARY_SUFFIX})
+#     #set(ZSTD_LIB_NAME ${CMAKE_STATIC_LIBRARY_PREFIX}zstd${CMAKE_STATIC_LIBRARY_SUFFIX})
+# endif()
 
-find_library(LIBLZMA_LIBRARIES
-             NAMES ${LIBLZMA_LIB_NAME})
+# find_library(LIBLZMA_LIBRARIES
+#              NAMES ${LIBLZMA_LIB_NAME})
 
-find_library(ZLIB_LIBRARIES
-             NAMES ${ZLIB_LIB_NAME})
+# find_library(ZLIB_LIBRARIES
+#              NAMES ${ZLIB_LIB_NAME})
 
 # find_library(ZSTD_LIBRARIES
 #              NAMES ${ZSTD_LIB_NAME})
@@ -45,7 +45,7 @@ endif()
 #list(APPEND CMAKE_PREFIX_PATH ${CMAKE_INSTALL_PREFIX})
 #find_package(shrinkwrap CONFIG REQUIRED)
 #if (NOT BUILD_SHARED_LIBS)
-    set(CMAKE_FIND_LIBRARY_SUFFIXES ".a;${CMAKE_FIND_LIBRARY_SUFFIXES}") # Prefer libz.a when both are available
+#set(CMAKE_FIND_LIBRARY_SUFFIXES ".a;${CMAKE_FIND_LIBRARY_SUFFIXES}") # Prefer libz.a when both are available
 #endif()
 
 # find_library(ZLIB_LIBRARY z)
@@ -57,15 +57,6 @@ find_package(Threads)
 set(SHRINKWRAP_BUILD_TESTS OFF)
 set(ZSTD_LEGACY_SUPPORT OFF)
 set(ZSTD_BUILD_PROGRAMS OFF)
-
-FetchContent_Declare(
-  zstd
-  GIT_REPOSITORY https://github.com/facebook/zstd.git
-  GIT_TAG v1.4.8
-  SOURCE_SUBDIR "build/cmake"
-  )
-FetchContent_MakeAvailable(zstd)
-
 FetchContent_Declare(
   shrinkwrap
   GIT_REPOSITORY https://github.com/CreRecombinase/shrinkwrap.git
@@ -80,8 +71,6 @@ FetchContent_MakeAvailable(shrinkwrap)
 #   FetchContent_Populate(shrinkwrap)
 #   add_subdirectory(${shrinkwrap_SOURCE_DIR})
 # endif()
-message(STATUS "Shrinkwrap_Source: ${shrinkwrap_SOURCE_DIR}")
-message(STATUS "ZSTD_Source: ${zstd_SOURCE_DIR}")
 
 
 add_definitions(-DSAVVY_VERSION="${PROJECT_VERSION}")
@@ -122,7 +111,7 @@ add_executable(sav
         src/sav/sort.cpp include/sav/sort.hpp
         src/sav/stat.cpp include/sav/stat.hpp
         src/sav/utility.cpp include/sav/utility.hpp)
-target_link_libraries(sav savvy libzstd_static)
+target_link_libraries(sav savvy)
 
 
 add_custom_target(manuals
