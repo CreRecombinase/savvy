@@ -4,8 +4,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#ifndef LIBSAVVY_SITE_INFO_HPP
-#define LIBSAVVY_SITE_INFO_HPP
+#ifndef LIBSAVVY_LEAN_SITE_INFO_HPP
+#define LIBSAVVY_LEAN_SITE_INFO_HPP
 
 #include "compressed_vector.hpp"
 #include <optional>
@@ -41,9 +41,9 @@ namespace savvy
      public:
       int chrom;
       std::optional<std::string> id;
-      std::uint32_t pos_ = 0;
+      std::uint32_t pos = 0;
       int n_alts=1;
-      float qual_ = typed_value::missing_value<float>(); //0.f;
+      float qual = typed_value::missing_value<float>(); //0.f;
       std::string ref;
       std::string alts;
       std::vector<int> filters;
@@ -113,215 +113,22 @@ namespace savvy
         }
       }
     protected:
-      static bool deserialize(site_info& s, const dictionary& dict, std::uint32_t& n_sample);
-      static bool deserialize_vcf(site_info& s, std::istream& is, const dictionary& dict);
-      static bool deserialize_sav1(site_info& s, std::istream& is, const std::list<header_value_details>& info_headers);
+      static bool deserialize(lean_site_info& s, const dictionary& dict, std::uint32_t& n_sample);
+      static bool deserialize_vcf(lean_site_info& s, std::istream& is, const dictionary& dict);
+      static bool deserialize_sav1(lean_site_info& s, std::istream& is, const std::list<header_value_details>& info_headers);
 
       template<typename Itr>
-      static bool serialize(const site_info& s, Itr out_it, const dictionary& dict, std::uint32_t n_sample, std::uint32_t n_fmt);
+      static bool serialize(const lean_site_info& s, Itr out_it, const dictionary& dict, std::uint32_t n_sample, std::uint32_t n_fmt);
     };
 
  
 
-
-  //namespace v2
-  //{
-    class site_info
+    class lean_variant : public lean_site_info
     {
-      friend class reader;
-      friend class writer;
-    private:
-      std::string chrom_;
-      std::string id_;
-      std::uint32_t pos_ = 0;
-      float qual_ = typed_value::missing_value<float>(); //0.f;
-      std::string ref_;
-      std::vector<std::string> alts_;
-      std::vector<std::string> filters_;
-      std::vector<std::pair<std::string, typed_value>> info_;
-      std::vector<char> shared_data_;
-    protected:
-      std::uint32_t n_fmt_ = 0;
-    public:
-      /**
-       * Default constructor.
-       */
-      site_info() {}
-
-      /**
-       * Constructs site_info object.
-       * @param chrom Chromosome
-       * @param pos 1-based genomic position
-       * @param ref Reference allele
-       * @param alts Vector of alternate alleles
-       * @param id Variant ID
-       * @param qual Variant quality
-       * @param filters Vector of variant filters
-       * @param info Vector of INFO key-value pairs.
-       */
-      site_info(std::string chrom, std::uint32_t pos, std::string ref, std::vector<std::string> alts,
-        std::string id = "",
-        float qual = typed_value::missing_value<float>(), // std::numeric_limits<float>::quiet_NaN(), // bcf_missing_value = 0x7F800001
-        std::vector<std::string> filters = {},
-        std::vector<std::pair<std::string, typed_value>> info = {});
-
-      /**
-       * Gets chromosome.
-       * @return Chromosome string
-       */
-      const std::string& chromosome() const { return chrom_; }
-      const std::string& chrom() const { return chrom_; } ///< Shorthand for chromosome().
-
-      /**
-       * Gets variant ID.
-       * @return Variant ID string
-       */
-      const std::string& id() const { return id_; }
-
-
-      /**
-       * Gets genomic position.
-       * @return 1-based position
-       */
-      std::uint32_t position() const { return pos_; }
-      std::uint32_t pos() const { return pos_; } ///< Shorthand for position().
-
-
-      /**
-       * Gets variant quality.
-       * @return Quality
-       */
-      float quality() const { return qual_; }
-      float qual() const { return qual_; } ///< Shorthand for quality().
-
-      /**
-       * Gets reference allele.
-       * @return Reference allele stirng
-       */
-      const std::string& ref() const { return ref_; }
-
-      /**
-       * Gets vector of alternate alleles.
-       * @return Alternate allele strings
-       */
-      const std::vector<std::string>& alts() const { return alts_; }
-
-      /**
-       * Gets vector of filter stirngs
-       * @return FILTER strings
-       */
-      const std::vector<std::string>& filters() const { return filters_; }
-
-      /**
-       * Gets vector of INFO key-value pairs.
-       * @return INFO fields
-       */
-      const std::vector<std::pair<std::string, typed_value>>& info_fields() const { return info_; }
-
-      /**
-       * Removes INFO field.
-       * @param it Iterator of INFO filed to remove.
-       * @return  Iterator to INFO field after the filed being removed.
-       */
-      std::vector<std::pair<std::string, typed_value>>::const_iterator remove_info(std::vector<std::pair<std::string, typed_value>>::const_iterator it)
-      {
-        return info_.erase(info_.begin() + (it - info_.cbegin()));
-      }
-
-      /**
-       * Removes INFO field by key.
-       * @param key Key of INFO field to remove
-       */
-      void remove_info(const std::string& key)
-      {
-        auto res = std::find_if(info_.begin(), info_.end(), [&key](const std::pair<std::string, savvy::typed_value>& v) { return v.first == key; });
-        if (res != info_.end())
-          info_.erase(res);
-      }
-
-      /**
-       * Gets value of INFO field
-       * @tparam T Destination vector or scalar type
-       * @param key Key of INFO field to retrieve
-       * @param dest Destination object
-       * @return False if INFO field is not present
-       */
-      template<typename T>
-      bool get_info(const std::string& key, T& dest) const
-      {
-        auto res = std::find_if(info_.begin(), info_.end(), [&key](const std::pair<std::string, savvy::typed_value>& v) { return v.first == key; });
-        if (res != info_.end())
-          return res->second.get(dest);
-        return false;
-      }
-
-
-      /**
-       * Updates INFO field specified by iterator.
-       * @tparam T Type of value object
-       * @param off Iterator of INFO field to update
-       * @param val New value for INFO field
-       */
-      template<typename T>
-      void set_info(decltype(info_)::const_iterator off, const T& val)
-      {
-        (info_.begin() + std::distance(info_.cbegin(), off))->second = val;
-      }
-
-      /**
-       * Sets INFO field.
-       * @tparam T Type of value object
-       * @param key Key for INFO field
-       * @param val Value for INFO field
-       */
-      template<typename T>
-      void set_info(const std::string& key, const T& val)
-      {
-        auto it = info_.begin();
-        for (; it != info_.end(); ++it)
-        {
-          if (it->first == key)
-          {
-            it->second = val;
-            return;
-          }
-        }
-
-        if (it == info_.end())
-        {
-          info_.emplace_back(key, val);
-        }
-      }
-    protected:
-      static bool deserialize(site_info& s, const dictionary& dict, std::uint32_t& n_sample);
-      static bool deserialize_vcf(site_info& s, std::istream& is, const dictionary& dict);
-      static bool deserialize_sav1(site_info& s, std::istream& is, const std::list<header_value_details>& info_headers);
-
-      template<typename Itr>
-      static bool serialize(const site_info& s, Itr out_it, const dictionary& dict, std::uint32_t n_sample, std::uint32_t n_fmt);
-    };
-
-class lean_variant : public lean_site_info
-{
-
-std::vector<std::pair<std::string, typed_value>> format_fields_;
-      std::vector<char> indiv_buf_;
-    public:
-      using site_info::site_info;
-
-
-}
-
-
-    class variant : public site_info
-    {
-      friend class reader;
-      friend class writer;
-    private:
       std::vector<std::pair<std::string, typed_value>> format_fields_;
       std::vector<char> indiv_buf_;
     public:
-      using site_info::site_info;
+      using lean_site_info::lean_site_info;
 
       /**
        * Gets vector of FORMAT key-value pairs.
@@ -363,14 +170,14 @@ std::vector<std::pair<std::string, typed_value>> format_fields_;
     };
 
     inline
-    site_info::site_info(std::string chrom,
+    lean_site_info::lean_site_info(int chrom,
       std::uint32_t pos,
       std::string ref,
-      std::vector<std::string> alts,
-      std::string id,
+      std::string alts,
+      std::optional<std::string id>,
       float qual,
-      std::vector<std::string> filters,
-      std::vector<std::pair<std::string, typed_value>> info)
+      std::vector<int> filters,
+      std::vector<std::pair<int, typed_value>> info)
       :
       chrom_(std::move(chrom)),
       id_(std::move(id)),

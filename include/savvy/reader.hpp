@@ -28,7 +28,7 @@ namespace savvy
   //{
     class reader : public file
     {
-    private:
+    public:
       std::string file_path_;
       std::unique_ptr<std::streambuf> sbuf_;
       std::unique_ptr<std::istream> input_stream_;
@@ -187,6 +187,7 @@ namespace savvy
        * @return *this
        */
       reader& read(variant& r);
+      reader& read(lean_variant &r);
 
       /**
        * Shorthand for read() function.
